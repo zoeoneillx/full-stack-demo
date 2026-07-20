@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LLM Demo — User Directory</title>
+  <style>
+    body   { font-family: sans-serif; max-width: 900px; margin: 0 auto; padding: 1rem; }
+    nav    { background: #333; color: white; padding: 0.75rem 1rem; margin-bottom: 1.5rem; border-radius: 4px; display: flex; align-items: center; gap: 1.25rem; }
+    nav a  { color: white; text-decoration: none; }
+    .service-name { font-weight: bold; font-size: 1.1rem; flex: 1; }
+    h1     { margin-top: 0; }
+    .card  { border: 1px solid #ddd; border-radius: 6px; padding: 1.25rem; margin-bottom: 1.25rem; background: #fafafa; }
+    .label { font-weight: 600; font-size: 0.9rem; color: #444; margin-bottom: 0.4rem; }
+    .question-box {
+      font-size: 1rem; padding: 0.6rem 0.75rem; border: 1px solid #ccc;
+      border-radius: 4px; background: #fff; color: #333; width: 100%; box-sizing: border-box;
+    }
+    button {
+      padding: 0.6rem 1.4rem; background: #5b4fcf; color: white; border: none;
+      border-radius: 4px; cursor: pointer; font-size: 1rem; margin-top: 0.75rem;
+    }
+    button:hover  { background: #4a3fbf; }
+    button:active { background: #3a2faf; }
+    .response-area {
+      min-height: 80px; padding: 0.75rem; border: 1px solid #ccc; border-radius: 4px;
+      background: #fff; font-size: 1rem; line-height: 1.6; color: #222;
+      white-space: pre-wrap;
+    }
+    .response-area.empty { color: #aaa; font-style: italic; }
+    .meta  { font-size: 0.8rem; color: #888; margin-top: 0.4rem; }
+    .callout {
+      border-left: 4px solid #5b4fcf; padding: 0.75rem 1rem; background: #f0eeff;
+      border-radius: 0 4px 4px 0; margin-top: 1.5rem; font-size: 0.9rem;
+    }
+    .callout strong { color: #5b4fcf; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/" class="service-name">User Directory</a>
+    <a href="/">Users</a>
+    <a href="/llm" style="text-decoration:underline">LLM Demo</a>
+    <a href="/health">Health</a>
+  </nav>
+
+  <h1>LLM Response Demo</h1>
+  <p>Click <strong>Generate Response</strong> multiple times and watch the answer change — even though the question never does.</p>
+
+  <div class="card">
+    <div class="label">Question</div>
+    <div class="question-box" data-testid="llm-question" role="textbox" aria-readonly="true">What is the capital of Ireland?</div>
+
+    <button id="ask-btn" data-testid="ask-btn">Generate Response</button>
+  </div>
+
+  <div class="card">
+    <div class="label">Response</div>
+    <div class="response-area empty" id="response-area" data-testid="llm-response" role="status" aria-live="polite">
+      No response yet — click Generate Response above.
+    </div>
+    <p class="meta" id="response-meta" data-testid="llm-meta"></p>
+  </div>
+
+  <div class="callout">
+    <strong>Testing challenge:</strong> The response wording changes every call but the <em>facts</em> are always correct.
+    How would you write a test that passes for any valid answer, without hardcoding the exact sentence?
+    <br><br>
+    See <code>tests/api/summary.spec.ts</code> and <code>exercises/e9-ai-feature/</code> for patterns.
+  </div>
+
+  <script>
+    const askBtn      = document.getElementById('ask-btn');
+    const responseArea = document.getElementById('response-area');
+    const responseMeta = document.getElementById('response-meta');
+
+    askBtn.addEventListener('click', async () => {
+      askBtn.disabled = true;
+      askBtn.textContent = 'Generating…';
+      responseArea.classList.add('empty');
+      responseArea.textContent = 'Thinking…';
+      responseMeta.textContent = '';
+
+      try {
+        // Artificial delay to simulate a real model call
+        await new Promise(r => setTimeout(r, 600 + Math.random() * 400));
+
+        const res  = await fetch('/api/llm/ask');
+        const data = await res.json();
+
+        responseArea.classList.remove('empty');
+        responseArea.textContent = data.response;
+        responseMeta.textContent =
+          `Variant ${data.responseIndex} of ${data.totalVariants} · model: ${data.model}`;
+      } catch (err) {
+        responseArea.textContent = 'Error fetching response. Is the server running?';
+      } finally {
+        askBtn.disabled = false;
+        askBtn.textContent = 'Generate Response';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "fullstack-demo",
+  "version": "1.0.0",
+  "description": "Simple full-stack demo app for testing",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "npx playwright test",
+    "test:unit": "node --test utils/dateFormat.test.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "@qflow/core": "^0.1.1",
+    "@types/node": "^25.6.0"
+  }
+}

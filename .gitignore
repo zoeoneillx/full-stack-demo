@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Playwright output
+test-results/
+playwright-report/
+
+# Environment files
+*.env
+*.env.*
+!*.env.example
+
+# qflow
+.qflow/
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/settings.json

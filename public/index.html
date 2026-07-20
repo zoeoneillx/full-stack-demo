@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Directory</title>
+  <style>
+    body  { font-family: sans-serif; max-width: 900px; margin: 0 auto; padding: 1rem; }
+    nav   { background: #333; color: white; padding: 0.75rem 1rem; margin-bottom: 1.5rem; border-radius: 4px; display: flex; align-items: center; gap: 1.25rem; }
+    nav a { color: white; text-decoration: none; }
+    .service-name { font-weight: bold; font-size: 1.1rem; flex: 1; }
+    h1 { margin-top: 0; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 2rem; }
+    th, td { border: 1px solid #ddd; padding: 0.5rem 0.75rem; text-align: left; }
+    th { background: #f4f4f4; }
+    form  { display: flex; flex-direction: column; gap: 0.75rem; max-width: 400px; }
+    label { font-weight: 600; }
+    input { padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
+    button[type="submit"] { padding: 0.6rem 1.2rem; background: #333; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; }
+    button[type="submit"]:hover:not(:disabled) { background: #555; }
+    button[type="submit"]:disabled { background: #999; cursor: not-allowed; }
+    .delete-btn { padding: 0.3rem 0.6rem; background: #c0392b; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    .delete-btn:hover { background: #e74c3c; }
+    /* Stats */
+    .stat-block  { display: inline-block; margin: 0 1.5rem 1rem 0; }
+    .stat-label  { font-size: 0.85rem; color: #555; margin: 0; }
+    .stat-value  { font-size: 1.8rem; font-weight: bold; margin: 0; }
+    /* Role filter */
+    .role-filter { border: 1px solid #ddd; border-radius: 4px; padding: 0.4rem 1rem 0.4rem 0.75rem; margin-bottom: 1rem; display: inline-flex; gap: 1.25rem; align-items: center; }
+    .role-filter legend { font-weight: bold; padding: 0 0.25rem; }
+    /* Error summary (GOV.UK-style — E2 locator target) */
+    .error-summary   { border: 3px solid #d4351c; padding: 1rem 1.25rem; margin-bottom: 1rem; outline: none; }
+    .error-summary h3 { margin: 0 0 0.5rem; color: #d4351c; font-size: 1rem; }
+    .error-summary ul { margin: 0; padding-left: 1.25rem; }
+    .error-summary a  { color: #d4351c; }
+  </style>
+</head>
+<body>
+  <nav>
+    <!-- E2: service-name link → page.getByRole('link', { name: 'User Directory' }) -->
+    <a href="/" class="service-name">User Directory</a>
+    <a href="/">Users</a>
+    <a href="/llm">LLM Demo</a>
+    <a href="/health">Health</a>
+  </nav>
+
+  <h1>User Management</h1>
+
+  <!-- =====================  USER LIST VIEW  ===================== -->
+  <div id="view-list">
+    <h2>Users</h2>
+    <a href="/users/new">+ Add User</a>
+    <p role="status" id="list-status" style="color:green;font-weight:bold;min-height:1.5rem"></p>
+
+    <!-- E2: stat block → XPath //p[text()='Total Users']/following-sibling::p
+                         → Playwright: page.getByTestId('user-count')              -->
+    <div class="stat-block">
+      <p class="stat-label">Total Users</p>
+      <p class="stat-value" id="user-count" data-testid="user-count">–</p>
+    </div>
+
+    <!-- E2: radio group → page.getByRole('radio', { name: 'Admin' }) -->
+    <fieldset class="role-filter">
+      <legend>Filter by role</legend>
+      <label><input type="radio" name="role-filter" id="role-all"       data-testid="filter-all"       value=""          checked> All</label>
+      <label><input type="radio" name="role-filter" id="role-admin"     data-testid="filter-admin"     value="admin">    Admin</label>
+      <label><input type="radio" name="role-filter" id="role-moderator" data-testid="filter-moderator" value="moderator"> Moderator</label>
+      <label><input type="radio" name="role-filter" id="role-user"      data-testid="filter-user"      value="user">     User</label>
+    </fieldset>
+
+    <table data-testid="user-table">
+      <thead>
+        <tr>
+          <th>ID</th><th>First Name</th><th>Last Name</th><th>Email</th><th>Role</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="users-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- =====================  CREATE USER VIEW  ===================== -->
+  <div id="view-new" style="display:none">
+    <h2>Create User</h2>
+    <form data-testid="create-form" id="create-form" novalidate>
+
+      <!-- E2: error summary → page.locator('.error-summary').getByRole('link') -->
+      <div id="error-summary" class="error-summary" role="alert" hidden tabindex="-1">
+        <h3>There is a problem</h3>
+        <ul id="error-list"></ul>
+      </div>
+
+      <label for="firstName-input">First Name</label>
+      <input type="text"     id="firstName-input" data-testid="firstName-input" />
+
+      <label for="lastName-input">Last Name</label>
+      <input type="text"     id="lastName-input"  data-testid="lastName-input"  />
+
+      <label for="email-input">Email</label>
+      <input type="email"    id="email-input"     data-testid="email-input"     />
+
+      <label for="password-input">Password</label>
+      <input type="password" id="password-input"  data-testid="password-input"  />
+
+      <!-- Server-side error (e.g. duplicate email) -->
+      <div role="alert" id="form-alert" style="display:none;color:#d4351c;font-weight:bold"></div>
+
+      <!-- E1-E: disabled until all fields are non-empty -->
+      <button type="submit" id="submit-btn" data-testid="submit-btn" disabled>Create User</button>
+    </form>
+  </div>
+
+  <script>
+    const tbody     = document.getElementById('users-tbody');
+    const form      = document.getElementById('create-form');
+    const formAlert = document.getElementById('form-alert');
+    const submitBtn = document.getElementById('submit-btn');
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // ── User list ──────────────────────────────────────────────────────────
+
+    async function loadUsers(role) {
+      const url = role ? `/api/users?role=${encodeURIComponent(role)}` : '/api/users';
+      const res  = await fetch(url);
+      const data = await res.json();
+      document.getElementById('user-count').textContent = data.length;
+      tbody.innerHTML = data.map(u => `
+        <tr>
+          <td>${escapeHtml(u.id)}</td>
+          <td>${escapeHtml(u.firstName || '')}</td>
+          <td>${escapeHtml(u.lastName  || '')}</td>
+          <td>${escapeHtml(u.email)}</td>
+          <td>${escapeHtml(u.role || '')}</td>
+          <td><button class="delete-btn" data-id="${escapeHtml(u.id)}">Delete</button></td>
+        </tr>`).join('');
+    }
+
+    function showStatus(msg) {
+      const el = document.getElementById('list-status');
+      el.textContent = msg;
+      setTimeout(() => { el.textContent = ''; }, 5000);
+    }
+
+    tbody.addEventListener('click', async (e) => {
+      if (!e.target.classList.contains('delete-btn')) return;
+      const id   = e.target.getAttribute('data-id');
+      const row  = e.target.closest('tr');
+      const name = `${row.cells[1].textContent} ${row.cells[2].textContent}`.trim();
+      const res  = await fetch(`/api/users/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        showStatus(`User "${name}" was deleted successfully.`);
+        const activeRole = document.querySelector('input[name="role-filter"]:checked')?.value || '';
+        loadUsers(activeRole);
+      }
+    });
+
+    // ── Create-user form ───────────────────────────────────────────────────
+
+    // E1-E: enable submit only when all four fields have a value
+    function updateSubmitState() {
+      submitBtn.disabled = !(
+        document.getElementById('firstName-input').value.trim() &&
+        document.getElementById('lastName-input').value.trim()  &&
+        document.getElementById('email-input').value.trim()     &&
+        document.getElementById('password-input').value
+      );
+    }
+    ['firstName-input', 'lastName-input', 'email-input', 'password-input'].forEach(id =>
+      document.getElementById(id).addEventListener('input', updateSubmitState)
+    );
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      formAlert.style.display = 'none';
+
+      const firstName = document.getElementById('firstName-input').value.trim();
+      const lastName  = document.getElementById('lastName-input').value.trim();
+      const email     = document.getElementById('email-input').value.trim();
+      const password  = document.getElementById('password-input').value;
+
+      // Client-side validation — GOV.UK-style error summary with anchor links
+      const errors = [];
+      if (!firstName) errors.push({ msg: 'First name is required', field: 'firstName-input' });
+      if (!lastName)  errors.push({ msg: 'Last name is required',  field: 'lastName-input'  });
+      if (!email)     errors.push({ msg: 'Email is required',      field: 'email-input'     });
+
+      const errorSummary = document.getElementById('error-summary');
+      const errorList    = document.getElementById('error-list');
+
+      if (errors.length > 0) {
+        errorList.innerHTML = errors
+          .map(err => `<li><a href="#${err.field}">${escapeHtml(err.msg)}</a></li>`)
+          .join('');
+        errorSummary.hidden = false;
+        errorSummary.focus();
+        return;
+      }
+      errorSummary.hidden = true;
+
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstName, lastName, email, password }),
+      });
+
+      if (res.ok) {
+        window.location.href = '/users';
+      } else {
+        const err = await res.json();
+        formAlert.textContent = err.error || 'An error occurred';
+        formAlert.style.display = 'block';
+      }
+    });
+
+    // ── Client-side router ─────────────────────────────────────────────────
+
+    function router() {
+      const p = window.location.pathname;
+      if (p === '/users/new') {
+        document.getElementById('view-list').style.display = 'none';
+        document.getElementById('view-new').style.display  = 'block';
+      } else {
+        document.getElementById('view-list').style.display = 'block';
+        document.getElementById('view-new').style.display  = 'none';
+        loadUsers();
+        document.querySelectorAll('input[name="role-filter"]').forEach(radio =>
+          radio.addEventListener('change', ev => loadUsers(ev.target.value))
+        );
+      }
+    }
+
+    window.addEventListener('popstate', router);
+    router();
+  </script>
+</body>
+</html>
