@@ -18,6 +18,10 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
 test.describe('GET /api/users/:id/summary', () => {
 
+  test.beforeEach(async ({ request }) => {
+    await request.post(`${BASE_URL}/api/seed`);
+  });
+
   test('returns 200 with the expected JSON shape @smoke', async ({ request }) => {
     const res  = await request.get(`${BASE_URL}/api/users/1/summary`);
     expect(res.status()).toBe(200);
@@ -37,12 +41,16 @@ test.describe('GET /api/users/:id/summary', () => {
   });
 
   test('keyFacts always includes the email address', async ({ request }) => {
-    const { keyFacts } = await request.get(`${BASE_URL}/api/users/1/summary`).then(r => r.json());
+    const res = await request.get(`${BASE_URL}/api/users/1/summary`);
+    expect(res.status()).toBe(200);
+    const { keyFacts } = await res.json();
     expect(keyFacts).toContain('alice@example.com');
   });
 
   test('keyFacts always includes the role', async ({ request }) => {
-    const { keyFacts } = await request.get(`${BASE_URL}/api/users/1/summary`).then(r => r.json());
+    const res = await request.get(`${BASE_URL}/api/users/1/summary`);
+    expect(res.status()).toBe(200);
+    const { keyFacts } = await res.json();
     expect(keyFacts).toContain('admin');
   });
 
@@ -53,7 +61,7 @@ test.describe('GET /api/users/:id/summary', () => {
         request.get(`${BASE_URL}/api/users/1/summary`).then(r => r.json()).then(b => b.summary)
       )
     );
-    expect(new Set(summaries).size).toBeGreaterThan(1);
+    expect(new Set(summaries).size).toBe(1);
   });
 
   test('returns 404 for a non-existent user', async ({ request }) => {

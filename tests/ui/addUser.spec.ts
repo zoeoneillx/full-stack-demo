@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { CreateUserPage } from '../pages/CreateUserPage';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
@@ -17,14 +18,10 @@ test.afterEach(async ({ request }) => {
 });
 
 test('Add user via UI saves first name, last name and email correctly @smoke', async ({ page }) => {
-  await page.goto(`${BASE_URL}/users/new`);
-
-  await page.getByLabel('First Name').fill(testUser.firstName);
-  await page.getByLabel('Last Name').fill(testUser.lastName);
-  await page.getByLabel('Email').fill(testUser.email);
-  await page.getByLabel('Password').fill(testUser.password);
-
-  await page.getByRole('button', { name: 'Create User' }).click();
+  const createPage = new CreateUserPage(page);
+  await createPage.goto();
+  await createPage.fillForm(testUser);
+  await createPage.submit();
 
   // Should navigate to user list or user detail page
   await expect(page).toHaveURL(/\/users/);
