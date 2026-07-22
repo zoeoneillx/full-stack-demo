@@ -153,6 +153,37 @@ app.get('/api/users/:id', (req, res) => {
   res.json(user);
 });
 
+// PUT /api/users/:id — edit an existing user
+app.put('/api/users/:id', (req, res) => {
+  const user = users.find(u => u.id === parseInt(req.params.id, 10));
+  if (!user) return res.status(404).json({ error: 'user not found' });
+
+  const { firstName, lastName, email, role } = req.body || {};
+
+  if (!firstName || typeof firstName !== 'string' || firstName.trim() === '')
+    return res.status(400).json({ error: 'firstName is required' });
+
+  if (!lastName || typeof lastName !== 'string' || lastName.trim() === '')
+    return res.status(400).json({ error: 'lastName is required' });
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!email || !emailRegex.test(email))
+    return res.status(400).json({ error: 'valid email is required' });
+
+  const duplicate = users.find(u => u.email === email.trim() && u.id !== user.id);
+  if (duplicate)
+    return res.status(409).json({ error: 'email already exists' });
+
+  user.firstName = firstName.trim();
+  user.lastName = lastName.trim();
+  user.email = email.trim();
+  if (typeof role === 'string' && role.trim() !== '') {
+    user.role = role.trim();
+  }
+
+  res.json(user);
+});
+
 // DELETE /api/users — delete by email body (test-cleanup helper)
 app.delete('/api/users', (req, res) => {
   const { email } = req.body || {};
