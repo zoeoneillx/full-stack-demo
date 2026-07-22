@@ -1,8 +1,12 @@
+import type { BrowserContext, Page } from '@playwright/test';
+
 type Keyword = 'Given' | 'When' | 'Then';
 
 export type StepWorld = {
   baseUrl: string;
   memory: Record<string, string>;
+  context?: BrowserContext;
+  page?: Page;
   lastResponseStatus?: number;
   lastResponseBody?: unknown;
   collectedResponses?: string[];

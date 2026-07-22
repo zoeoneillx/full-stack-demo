@@ -1,3 +1,4 @@
+import './amazon.steps';
 import './auth.steps';
 import './edit.steps';
 import './llm.steps';

@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { chromium } from '@playwright/test';
 import { createWorld, stepDefinitions } from './index';
 
 type Step = {
@@ -177,16 +178,26 @@ async function runScenario(
   scenarioSteps: Step[]
 ): Promise<void> {
   const world = createWorld();
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  world.context = context;
+  world.page = page;
 
-  for (const step of background) {
-    await runStep(world, step);
+  try {
+    for (const step of background) {
+      await runStep(world, step);
+    }
+
+    for (const step of scenarioSteps) {
+      await runStep(world, step);
+    }
+
+    process.stdout.write(`PASS ${featureName} :: ${scenarioName}\n`);
+  } finally {
+    await context.close().catch(() => {});
+    await browser.close().catch(() => {});
   }
-
-  for (const step of scenarioSteps) {
-    await runStep(world, step);
-  }
-
-  process.stdout.write(`PASS ${featureName} :: ${scenarioName}\n`);
 }
 
 async function runFeatureFile(filePath: string): Promise<{ passed: number; failed: number }> {
